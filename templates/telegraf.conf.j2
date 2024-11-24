@@ -1,20 +1,83 @@
 {{ ansible_managed | comment }}
 
-[agent]
-{% for key, value in telegraf_config.agent.items() %}
-  {{ key }} = {{ value | to_nice_yaml(indent=2) }}
+{% if telegraf_config.global_tags is defined %}
+[global_tags]
+{% for option, value in telegraf_config.global_tags.items() | sort %}
+{% if value is sameas true %}
+  {{ option }} = true
+{% elif value is sameas false %}
+  {{ option }} = false
+{% elif value is string %}
+  {{ option }} = "{{ value }}"
+{% elif value is number %}
+  {{ option }} = {{ value }}
+{% elif value is iterable %}
+  {{ option }} = ["{{ value | join(", ") }}"]
+{% else %}
+  {{ option }} = "{{ value }}"
+{% endif %}
 {% endfor %}
+{% endif %}
 
+{% if telegraf_config.agent is defined %}
+[agent]
+{% for option, value in telegraf_config.agent.items() | sort %}
+{% if value is sameas true %}
+  {{ option }} = true
+{% elif value is sameas false %}
+  {{ option }} = false
+{% elif value is string %}
+  {{ option }} = "{{ value }}"
+{% elif value is number %}
+  {{ option }} = {{ value }}
+{% elif value is iterable %}
+  {{ option }} = ["{{ value | join(", ") }}"]
+{% else %}
+  {{ option }} = "{{ value }}"
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if telegraf_config.outputs is defined %}
 {% for output in telegraf_config.outputs %}
 [[outputs.{{ output.type }}]]
-{% for key, value in output.config.items() %}
-  {{ key }} = {{ value | to_nice_yaml(indent=2) }}
-{% endfor %}
+{% for option, value in output.config.items() | sort %}
+{% if value is sameas true %}
+  {{ option }} = true
+{% elif value is sameas false %}
+  {{ option }} = false
+{% elif value is string %}
+  {{ option }} = "{{ value }}"
+{% elif value is number %}
+  {{ option }} = {{ value }}
+{% elif value is iterable %}
+  {{ option }} = ["{{ value | join('", "') }}"]
+{% else %}
+  {{ option }} = "{{ value }}"
+{% endif %}
 {% endfor %}
 
+{% endfor %}
+{% endif %}
+
+{% if telegraf_config.inputs is defined %}
 {% for input in telegraf_config.inputs %}
 [[inputs.{{ input.type }}]]
-{% for key, value in input.config.items() %}
-  {{ key }} = {{ value | to_nice_yaml(indent=2) }}
+{% for option, value in input.config.items() | sort %}
+{% if value is sameas true %}
+  {{ option }} = true
+{% elif value is sameas false %}
+  {{ option }} = false
+{% elif value is string %}
+  {{ option }} = "{{ value }}"
+{% elif value is number %}
+  {{ option }} = {{ value }}
+{% elif value is iterable %}
+  {{ option }} = ["{{ value | join('", "') }}"]
+{% else %}
+  {{ option }} = "{{ value }}"
+{% endif %}
 {% endfor %}
+
 {% endfor %}
+{% endif %}

@@ -1,13 +1,27 @@
 # Telegraf default settings
-telegraf_repo_url: "{{ 'https://repos.influxdata.com/debian stable main' if ansible_os_family == 'Debian' else 'https://repos.influxdata.com/rhel/8/x86_64/stable/' }}"
-telegraf_gpg_key_url: "{{ 'https://repos.influxdata.com/influxdb.key' }}"
 telegraf_config_path: /etc/telegraf/telegraf.conf
 telegraf_plugins_path: /etc/telegraf/telegraf.d
 telegraf_service_name: telegraf
 telegraf_plugins: []
 
+telegraf_config: >-
+  {{
+    telegraf_config_role_var
+    | combine(telegraf_config_dependent_var | default({}))
+    | combine(telegraf_config_group_var | default({}))
+    | combine(telegraf_config_host_var | default({}))
+  }}
+telegraf_config_role_var: {}
+telegraf_config_dependent_var: {}
+telegraf_config_group_var: {}
+telegraf_config_host_var: {}
+
+
+
 # Default configuration for Telegraf
-telegraf_config:
+telegraf_config_role_var:
+  global_tags:
+    stage: "hoden"
   agent:
     interval: "10s"
     round_interval: true
@@ -20,12 +34,9 @@ telegraf_config:
     hostname: "{{ ansible_hostname }}"
     omit_hostname: false
   outputs:
-    - type: "loki"
-      config:
-        url: "http://loki.local:3100/loki/api/v1/push"
-        labels:
-          job: "telegraf"
-          host: "{{ ansible_hostname }}"
+    # - type: "loki"
+    #   config:
+    #     domain: "http://localhost:3100/"
     - type: "prometheus_client"
       config:
         listen: ":9273"
@@ -41,36 +52,42 @@ telegraf_config:
         totalcpu: true
         collect_cpu_time: false
         report_active: false
+    - type: "chrony"
+      config: {}
     - type: "mem"
       config: {}
     - type: "disk"
       config:
-        ignore_fs: ["tmpfs", "devtmpfs"]
-    - type: "net"
+        ignore_fs: ["ext4", "vfat", "tmpfs", "devtmpfs", "devfs", "iso9660", "overlay", "aufs", "squashfs"]
+    - type: "nstat"
       config: {}
     - type: "system"
       config: {}
-    - type: "smart"
-      config:
-        attributes: true
-        devices: ["/dev/sda", "/dev/vda", "/dev/sdb", "/dev/vdb"]
+    # - type: "lvm"
+    #   config: {}
+    # - type: "smart"
+    #   config:
+    #     attributes: true
+    #     devices: ["/dev/sda", "/dev/vda", "/dev/sdb", "/dev/vdb"]
     - type: "procstat"
       config:
         pid_file: "/var/run/sshd.pid"
-    - type: "service"
+    - type: "systemd_units"
       config:
-        services:
-          - sshd
-          - cron
-          - systemd-journald
-    - type: "journald"
+        unittype: "service"
+        scope: "system"
+        pattern: "sshd cron systemd-journald telegraf chrony"
+    - type: "cgroup"
       config:
-        files: ["/var/log/journal"]
-        #units: ["sshd.service", "cron.service", "nginx.service"]
-        from_beginning: false
-        max_entries: 5000
-    - type: "logparser"
-      config:
-        files: ["/var/log/syslog", "/var/log/messages"]
-        from_beginning: true
-        name_override: "journald"
+        paths: ["/sys/fs/cgroup/cpu,cpuacct/cpuacct.usage", "/sys/fs/cgroup/cpu,cpuacct/cpuacct.stat", "/sys/fs/cgroup/memory/memory.usage_in_bytes", "/sys/fs/cgroup/memory/memory.stat"]
+    # - type: "journald"
+    #   config:
+    #     files: ["/var/log/journal"]
+    #     #units: ["sshd.service", "cron.service", "nginx.service"]
+    #     from_beginning: false
+    #     max_entries: 5000
+    # - type: "logparser"
+    #   config:
+    #     files: ["/var/log/syslog", "/var/log/messages"]
+    #     from_beginning: true
+    #     name_override: "journald"
